@@ -54,6 +54,10 @@ class Generator
                 try {
                     return $this->routeToOperation($openApi, $route);
                 } catch (Throwable $e) {
+                    // Prevent runtime error
+                    if (str_contains($e->getMessage(), 'T_PAAMAYIM_NEKUDOTAYIM')) {
+                        return null;
+                    }
                     if (config('app.debug', false)) {
                         $method = $route->methods()[0];
                         $action = $route->getAction('uses');
