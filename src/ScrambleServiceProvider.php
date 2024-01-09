@@ -41,7 +41,8 @@ class ScrambleServiceProvider extends PackageServiceProvider
             ->name('scramble')
             ->hasConfigFile()
             ->hasRoute('web')
-            ->hasViews('scramble');
+            ->hasViews('scramble')
+            ->hasCommand(GenerateOpenApi::class);
 
         $this->app->when([Infer::class, ClassAstHelper::class, TypeInferringVisitor::class])
             ->needs('$extensions')
