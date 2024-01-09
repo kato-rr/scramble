@@ -17,6 +17,7 @@ use Illuminate\Routing\Route;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Route as RouteFacade;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Cache;
 use Throwable;
 
 class Generator
@@ -46,6 +47,17 @@ class Generator
     }
 
     public function __invoke()
+    {
+        if (!Cache::has('openapi')) {
+            logger()->warning('OpenAPI cache not found. run `scramble:generate` command.');
+            
+            return;
+        }
+
+        return Cache::get('openapi');
+    }
+
+    public function generate()
     {
         $openApi = $this->makeOpenApi();
 

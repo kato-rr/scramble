@@ -49,7 +49,8 @@ class ScrambleServiceProvider extends PackageServiceProvider
             ->name('scramble')
             ->hasConfigFile()
             ->hasRoute('web')
-            ->hasViews('scramble');
+            ->hasViews('scramble')
+            ->hasCommand(GenerateOpenApi::class);
 
         $this->app->singleton(FileParser::class, function () {
             return new FileParser(
