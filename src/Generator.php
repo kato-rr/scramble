@@ -15,6 +15,7 @@ use Illuminate\Routing\Route;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Route as RouteFacade;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Cache;
 use Throwable;
 
 class Generator
@@ -33,6 +34,59 @@ class Generator
     }
 
     public function __invoke()
+    {
+        if (!Cache::has('openapi')) {
+            logger()->warning('OpenAPI cache not found. run `scramble:generate` command.');
+            
+            return;
+        }
+
+        return Cache::get('openapi');
+    }
+
+    public function generate()
+    {
+        $openApi = $this->makeOpenApi();
+
+        $this->getRoutes()
+            ->map(function (Route $route) use ($openApi) {
+                try {
+                    return $this->routeToOperation($openApi, $route);
+                } catch (Throwable $e) {
+                    // Prevent runtime error
+                    if (str_contains($e->getMessage(), 'T_PAAMAYIM_NEKUDOTAYIM')) {
+                        return null;
+                    }
+                    if (config('app.debug', false)) {
+                        $method = $route->methods()[0];
+                        $action = $route->getAction('uses');
+
+                        logger()->error("Error when analyzing route '$method $route->uri' ($action): {$e->getMessage()} – ".($e->getFile().' on line '.$e->getLine()));
+                    }
+
+                    throw $e;
+                }
+            })
+            ->filter() // Closure based routes are filtered out for now, right here
+            ->each(fn (Operation $operation) => $openApi->addPath(
+                Path::make(
+                    (string) Str::of($operation->path)
+                        ->replaceFirst(config('scramble.api_path', 'api'), '')
+                        ->trim('/')
+                )->addOperation($operation)
+            ))
+            ->toArray();
+
+        $this->moveSameAlternativeServersToPath($openApi);
+
+        if (isset(Scramble::$openApiExtender)) {
+            (Scramble::$openApiExtender)($openApi);
+        }
+
+        return $openApi->toArray();
+    }
+
+    public function generate()
     {
         $openApi = $this->makeOpenApi();
 
