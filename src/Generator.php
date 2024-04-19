@@ -53,15 +53,24 @@ class Generator
                 try {
                     return $this->routeToOperation($openApi, $route);
                 } catch (Throwable $e) {
-                    // Prevent runtime error
-                    if (str_contains($e->getMessage(), 'T_PAAMAYIM_NEKUDOTAYIM')) {
-                        return null;
+                    //todo:  This is a temporary fix to ignore some exceptions that are thrown when analyzing routes.
+                    $ignoredExceptions = [
+                        'T_PAAMAYIM_NEKUDOTAYIM',
+                        'Unknown database type geometrycollection requested',
+                    ];
+
+                    foreach ($ignoredExceptions as $ignoredException) {
+                        if (str_contains($e->getMessage(), $ignoredException)) {
+                            logger()->warning("Error when analyzing route '$route->uri': {$e->getMessage()}");
+                            return null;
+                        }
                     }
+
                     if (config('app.debug', false)) {
                         $method = $route->methods()[0];
                         $action = $route->getAction('uses');
 
-                        logger()->error("Error when analyzing route '$method $route->uri' ($action): {$e->getMessage()} – ".($e->getFile().' on line '.$e->getLine()));
+                        logger()->error("Error when analyzing route '$method $route->uri' ($action): {$e->getMessage()} – " . ($e->getFile() . ' on line ' . $e->getLine()));
                     }
 
                     throw $e;
@@ -99,7 +108,7 @@ class Generator
         [$defaultProtocol] = explode('://', url('/'));
         $servers = config('scramble.servers') ?: [
             '' => ($domain = config('scramble.api_domain'))
-                ? $defaultProtocol.'://'.$domain.'/'.config('scramble.api_path', 'api')
+                ? $defaultProtocol . '://' . $domain . '/' . config('scramble.api_path', 'api')
                 : config('scramble.api_path', 'api'),
         ];
         foreach ($servers as $description => $url) {
@@ -116,7 +125,7 @@ class Generator
         return collect(RouteFacade::getRoutes())
             ->pipe(function (Collection $c) {
                 $onlyRoute = $c->first(function (Route $route) {
-                    if (! is_string($route->getAction('uses'))) {
+                    if (!is_string($route->getAction('uses'))) {
                         return false;
                     }
                     try {
@@ -134,14 +143,14 @@ class Generator
                 return $onlyRoute ? collect([$onlyRoute]) : $c;
             })
             ->filter(function (Route $route) {
-                return ! ($name = $route->getAction('as')) || ! Str::startsWith($name, 'scramble');
+                return !($name = $route->getAction('as')) || !Str::startsWith($name, 'scramble');
             })
             ->filter(function (Route $route) {
                 $routeResolver = Scramble::$routeResolver ?? function (Route $route) {
                     $expectedDomain = config('scramble.api_domain');
 
                     return Str::startsWith($route->uri, config('scramble.api_path', 'api'))
-                        && (! $expectedDomain || $route->getDomain() === $expectedDomain);
+                        && (!$expectedDomain || $route->getDomain() === $expectedDomain);
                 };
 
                 return $routeResolver($route);
@@ -154,7 +163,7 @@ class Generator
     {
         $routeInfo = new RouteInfo($route);
 
-        if (! $routeInfo->isClassBased()) {
+        if (!$routeInfo->isClassBased()) {
             return null;
         }
 
@@ -175,7 +184,7 @@ class Generator
                     return collect($o->servers)->map(fn (Server $s) => $s->url)->join('.');
                 })->count() === 1;
 
-            if (! $operationsHaveSameAlternativeServers) {
+            if (!$operationsHaveSameAlternativeServers) {
                 continue;
             }
 
