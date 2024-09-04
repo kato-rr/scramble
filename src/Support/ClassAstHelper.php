@@ -44,7 +44,7 @@ class ClassAstHelper
     {
         $this->classReflection = new \ReflectionClass($this->class);
 
-        $fileAst = (new ParserFactory)->create(ParserFactory::PREFER_PHP7)->parse(file_get_contents($this->classReflection->getFileName()));
+        $fileAst = (new ParserFactory)->createForNewestSupportedVersion()->parse(file_get_contents($this->classReflection->getFileName()));
 
         $this->namesResolver = $this->extractNamesResolver($fileAst);
 
